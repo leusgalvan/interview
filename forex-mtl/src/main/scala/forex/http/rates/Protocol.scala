@@ -30,7 +30,7 @@ object Protocol {
     Encoder.instance[Currency] { show.show _ andThen Json.fromString }
 
   implicit val currencyDecoder: Decoder[Currency] =
-    Decoder[String].map(Currency.fromString)
+    Decoder.decodeString.emap(s => Currency.fromString(s).toRight(s"invalid currency: $s"))
 
   implicit val pairEncoder: Encoder[Pair] =
     deriveConfiguredEncoder[Pair]
