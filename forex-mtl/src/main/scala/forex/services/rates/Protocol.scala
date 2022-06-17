@@ -9,20 +9,27 @@ import java.time.OffsetDateTime
 object Protocol {
   implicit val configuration: Configuration = Configuration.default
 
-  final case class OneFrameResponse(
-      rates: List[OneFrameRate]
-  )
+  sealed trait OneFrameResponse
+  final case class RatesResponse(rates: List[OneFrameRate]) extends OneFrameResponse
+  final case class ErrorResponse(error: String) extends OneFrameResponse
 
   final case class OneFrameRate(
-      from: String,
-      to: String,
-      price: Double,
-      time_stamp: OffsetDateTime
+    from: String,
+    to: String,
+    price: Double,
+    time_stamp: OffsetDateTime
   )
 
   implicit val oneFrameRateDecoder: Decoder[OneFrameRate] =
     deriveConfiguredDecoder[OneFrameRate]
 
-  implicit val oneFrameResponseDecoder: Decoder[OneFrameResponse] =
-    Decoder.decodeList(oneFrameRateDecoder).map(OneFrameResponse.apply)
+  implicit val ratesResponseDecoder: Decoder[RatesResponse] =
+    Decoder.decodeList(oneFrameRateDecoder).map(RatesResponse.apply)
+
+  implicit val errorResponseDecoder: Decoder[ErrorResponse] =
+    deriveConfiguredDecoder[ErrorResponse]
+
+  implicit def oneFrameResponseDecoder: Decoder[OneFrameResponse] = {
+    ratesResponseDecoder.either(errorResponseDecoder).map(_.fold[OneFrameResponse](x => x, x => x))
+  }
 }
