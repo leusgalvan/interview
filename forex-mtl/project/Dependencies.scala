@@ -3,6 +3,7 @@ import sbt._
 object Dependencies {
 
   object Versions {
+    val redis4cats          = "0.13.1"
     val cats                = "2.5.0"
     val catsEffect          = "2.4.1"
     val fs2                 = "2.5.4"
@@ -21,6 +22,7 @@ object Dependencies {
     def circe(artifact: String): ModuleID = "io.circe"    %% artifact % Versions.circe
     def http4s(artifact: String): ModuleID = "org.http4s" %% artifact % Versions.http4s
 
+    lazy val redis4cats          = "dev.profunktor"        %% "redis4cats-effects"         % Versions.redis4cats
     lazy val cats                = "org.typelevel"         %% "cats-core"                  % Versions.cats
     lazy val catsEffect          = "org.typelevel"         %% "cats-effect"                % Versions.catsEffect
     lazy val fs2                 = "co.fs2"                %% "fs2-core"                   % Versions.fs2
