@@ -5,8 +5,7 @@ import forex.services.redis.errors.Error.RedisMalformedValue
 import forex.services.redis.errors._
 import io.circe.generic.auto._
 import io.circe.syntax._
-
-import scala.util.{Failure, Success, Try}
+import io.circe.parser._
 
 object Protocol {
   def toRedisKey(pair: Rate.Pair): String =
@@ -16,10 +15,9 @@ object Protocol {
     rate.asJson.noSpaces
 
   def fromRedisValue(value: String): Either[Error, Rate] = {
-    Try(value.asJson).map(_.as[Rate]) match {
-      case Success(Right(rate)) => Right(rate)
-      case Success(Left(decodeFailure)) => Left(RedisMalformedValue(decodeFailure.message))
-      case Failure(exception) => Left(RedisMalformedValue(exception.getMessage))
+    decode[Rate](value) match {
+      case Right(rate) => Right(rate)
+      case Left(err) => Left(RedisMalformedValue(err.getMessage))
     }
   }
 }

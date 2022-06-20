@@ -5,4 +5,8 @@ import forex.services.redis.errors.Error
 
 trait Algebra[F[_]] {
   def get(pair: Rate.Pair): F[Error Either Option[Rate]]
+
+  def write(rate: Rate): F[Error Either Unit]
+
+  def delete(pair: Rate.Pair): F[Error Either Long]
 }

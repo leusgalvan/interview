@@ -11,8 +11,8 @@ import forex.services.redis.Algebra
 import forex.services.redis.errors._
 
 class RedisService[F[_]](client: RedisClient)(implicit
-    cs: ContextShift[F],
-    concurrent: Concurrent[F]
+                                              cs: ContextShift[F],
+                                              concurrent: Concurrent[F]
 ) extends Algebra[F] {
   import forex.services.redis.Protocol._
 
@@ -26,6 +26,21 @@ class RedisService[F[_]](client: RedisClient)(implicit
           case None =>
             Right(None)
         }
+    }
+  }
+
+  override def write(rate: Rate): F[Either[Error, Unit]] = {
+    Redis[F].fromClient(client, RedisCodec.Utf8).use { commands =>
+      val key = toRedisKey(rate.pair)
+      val value = toRedisValue(rate)
+      commands.set(key, value).map(Right.apply)
+    }
+  }
+
+  override def delete(pair: Rate.Pair): F[Either[Error, Long]] = {
+    Redis[F].fromClient(client, RedisCodec.Utf8).use { commands =>
+      val key = toRedisKey(pair)
+      commands.del(key).map(Right.apply)
     }
   }
 }
