@@ -9,10 +9,11 @@ import dev.profunktor.redis4cats.effect.Log.NoOp._
 import forex.domain.Rate
 import forex.services.redis.Algebra
 import forex.services.redis.errors._
+import scala.concurrent.duration._
 
-class RedisService[F[_]](client: RedisClient)(implicit
-                                              cs: ContextShift[F],
-                                              concurrent: Concurrent[F]
+class RedisService[F[_]](client: RedisClient, expirationInSeconds: Int)(implicit
+    cs: ContextShift[F],
+    concurrent: Concurrent[F]
 ) extends Algebra[F] {
   import forex.services.redis.Protocol._
 
@@ -33,7 +34,7 @@ class RedisService[F[_]](client: RedisClient)(implicit
     Redis[F].fromClient(client, RedisCodec.Utf8).use { commands =>
       val key = toRedisKey(rate.pair)
       val value = toRedisValue(rate)
-      commands.set(key, value).map(Right.apply)
+      commands.setEx(key, value, expirationInSeconds.seconds).map(Right.apply)
     }
   }
 
@@ -46,8 +47,8 @@ class RedisService[F[_]](client: RedisClient)(implicit
 }
 
 object RedisService {
-  def apply[F[_]](client: RedisClient)(implicit
+  def apply[F[_]](client: RedisClient, expirationInSeconds: Int)(implicit
       cs: ContextShift[F],
       concurrent: Concurrent[F]
-  ): RedisService[F] = new RedisService[F](client)
+  ): RedisService[F] = new RedisService[F](client, expirationInSeconds)
 }

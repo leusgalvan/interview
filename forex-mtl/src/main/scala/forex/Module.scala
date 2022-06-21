@@ -12,7 +12,7 @@ import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout}
 
 class Module[F[_]: Concurrent: Timer: ContextShift](config: ApplicationConfig, redisClient: RedisClient) {
-  private val redisService: RedisService[F] = RedisServices.live[F](redisClient)
+  private val redisService: RedisService[F] = RedisServices.live[F](redisClient, config.redis.expirationInSeconds)
 
   private val ratesService: RatesService[F] = RatesServices.dummy[F]
 
