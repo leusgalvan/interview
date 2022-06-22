@@ -17,7 +17,7 @@ case class HttpConfig(
 case class RedisConfig(
     host: String,
     port: Int,
-    expirationInSeconds: Int
+    expiration: FiniteDuration
 )
 
 case class OneFrameConfig(

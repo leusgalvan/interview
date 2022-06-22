@@ -16,8 +16,8 @@ class RedisServiceSpec extends AnyFunSuite {
   implicit val cs: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
 
-  val redisUri = "redis://localhost:6379"
-  val defaultExpiration = 5
+  private val redisUri = "redis://localhost:6379"
+  private val defaultExpiration = 5.seconds
 
   // docker pull redis
   // docker run -p 6379:6379 redis
@@ -46,7 +46,7 @@ class RedisServiceSpec extends AnyFunSuite {
     val currencies = Pair(Currency.USD, Currency.CAD)
     val rate = Rate(currencies, Price.fromInt(10), Timestamp.now)
     val result = RedisClient[IO].from(redisUri).use { client =>
-      val service = RedisService[IO](client, 1)
+      val service = RedisService[IO](client, 1.second)
       service.delete(currencies) *> service.write(rate) *> IO.sleep(1100.millis) *> service.get(currencies)
     }.unsafeRunSync()
 

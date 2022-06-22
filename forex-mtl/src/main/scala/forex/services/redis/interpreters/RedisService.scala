@@ -11,7 +11,7 @@ import forex.services.redis.Algebra
 import forex.services.redis.errors._
 import scala.concurrent.duration._
 
-class RedisService[F[_]](client: RedisClient, expirationInSeconds: Int)(implicit
+class RedisService[F[_]](client: RedisClient, expiration: FiniteDuration)(implicit
     cs: ContextShift[F],
     concurrent: Concurrent[F]
 ) extends Algebra[F] {
@@ -34,7 +34,7 @@ class RedisService[F[_]](client: RedisClient, expirationInSeconds: Int)(implicit
     Redis[F].fromClient(client, RedisCodec.Utf8).use { commands =>
       val key = toRedisKey(rate.pair)
       val value = toRedisValue(rate)
-      commands.setEx(key, value, expirationInSeconds.seconds).map(Right.apply)
+      commands.setEx(key, value, expiration).map(Right.apply)
     }
   }
 
@@ -47,8 +47,8 @@ class RedisService[F[_]](client: RedisClient, expirationInSeconds: Int)(implicit
 }
 
 object RedisService {
-  def apply[F[_]](client: RedisClient, expirationInSeconds: Int)(implicit
-      cs: ContextShift[F],
-      concurrent: Concurrent[F]
-  ): RedisService[F] = new RedisService[F](client, expirationInSeconds)
+  def apply[F[_]](client: RedisClient, expiration: FiniteDuration)(implicit
+    cs: ContextShift[F],
+    concurrent: Concurrent[F]
+  ): RedisService[F] = new RedisService[F](client, expiration)
 }

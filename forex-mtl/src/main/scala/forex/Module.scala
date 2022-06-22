@@ -17,7 +17,7 @@ class Module[F[_]: Concurrent: Timer: ContextShift](
     redisClient: RedisClient,
     httpClient: Client[F]
 ) {
-  private val redisService: RedisService[F] = RedisServices.live[F](redisClient, config.redis.expirationInSeconds)
+  private val redisService: RedisService[F] = RedisServices.live[F](redisClient, config.redis.expiration)
 
   private val ratesService: RatesService[F] = RatesServices.live[F](
     httpClient, config.oneFrame.host, config.oneFrame.port
