@@ -1,8 +1,11 @@
 package forex.services.rates
 
+import cats.effect.Sync
 import io.circe._
 import io.circe.generic.extras.Configuration
 import io.circe.generic.extras.semiauto.deriveConfiguredDecoder
+import org.http4s.EntityDecoder
+import org.http4s.circe.jsonOf
 
 import java.time.OffsetDateTime
 
@@ -32,4 +35,6 @@ object Protocol {
   implicit def oneFrameResponseDecoder: Decoder[OneFrameResponse] = {
     ratesResponseDecoder.either(errorResponseDecoder).map(_.fold[OneFrameResponse](x => x, x => x))
   }
+
+  implicit def jsonDecoder[A : Decoder, F[_]: Sync]: EntityDecoder[F, A] = jsonOf[F, A]
 }

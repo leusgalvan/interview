@@ -8,13 +8,20 @@ import forex.services._
 import forex.programs._
 import forex.services.redis.interpreters.RedisService
 import org.http4s._
+import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout}
 
-class Module[F[_]: Concurrent: Timer: ContextShift](config: ApplicationConfig, redisClient: RedisClient) {
+class Module[F[_]: Concurrent: Timer: ContextShift](
+    config: ApplicationConfig,
+    redisClient: RedisClient,
+    httpClient: Client[F]
+) {
   private val redisService: RedisService[F] = RedisServices.live[F](redisClient, config.redis.expirationInSeconds)
 
-  private val ratesService: RatesService[F] = RatesServices.dummy[F]
+  private val ratesService: RatesService[F] = RatesServices.live[F](
+    httpClient, config.oneFrame.host, config.oneFrame.port
+  )
 
   private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, redisService)
 
