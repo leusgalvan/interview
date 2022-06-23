@@ -4,7 +4,11 @@ import forex.services.rates.errors.{ Error => RatesServiceError }
 import forex.services.redis.errors.{ Error => RedisServiceError }
 object errors {
 
-  sealed trait Error extends Exception
+  sealed trait Error extends Exception {
+    val msg: String
+    override def getMessage: String = msg
+  }
+
   object Error {
     final case class RateLookupFailed(msg: String) extends Error
     final case class RedisFailed(msg: String) extends Error

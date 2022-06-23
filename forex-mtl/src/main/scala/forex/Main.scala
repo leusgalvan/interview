@@ -2,7 +2,9 @@ package forex
 
 import scala.concurrent.ExecutionContext
 import cats.effect._
+import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import dev.profunktor.redis4cats.connection.{RedisClient, RedisURI}
+import dev.profunktor.redis4cats.data.RedisCodec
 import dev.profunktor.redis4cats.log4cats._
 import forex.config._
 import fs2.Stream
@@ -22,22 +24,22 @@ object Main extends IOApp {
 }
 
 class Application[F[_]: ConcurrentEffect: Timer: ContextShift: Logger] {
-  private def makeResources(config: ApplicationConfig, ec: ExecutionContext): Resource[F, (RedisClient, Client[F])] = {
-
+  private def makeResources(config: ApplicationConfig, ec: ExecutionContext): Resource[F, (RedisCommands[F, String, String], Client[F])] = {
     for {
       redisURI <- Resource.eval(RedisURI.make[F](
         s"redis://${config.redis.host}:${config.redis.port}")
       )
       redisClient <- RedisClient[F].fromUri(redisURI)
+      redisCommands <- Redis[F].fromClient(redisClient, RedisCodec.Utf8)
       httpClient <- BlazeClientBuilder[F](ec).resource
-    } yield (redisClient, httpClient)
+    } yield (redisCommands, httpClient)
   }
 
   def stream(ec: ExecutionContext): Stream[F, Unit] = {
     for {
       config <- Config.stream("app")
-      (redisClient, httpClient) <- Stream.resource(makeResources(config, ec))
-      module = new Module[F](config, redisClient, httpClient)
+      (redisCommands, httpClient) <- Stream.resource(makeResources(config, ec))
+      module = new Module[F](config, redisCommands, httpClient)
       _ <- BlazeServerBuilder[F](ec)
             .bindHttp(config.http.port, config.http.host)
             .withHttpApp(module.httpApp)

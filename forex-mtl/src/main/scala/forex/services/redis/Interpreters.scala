@@ -1,13 +1,15 @@
 package forex.services.redis
 
-import cats.effect.{Concurrent, ContextShift}
-import dev.profunktor.redis4cats.connection.RedisClient
+import cats.effect.Concurrent
+import dev.profunktor.redis4cats.RedisCommands
 import forex.services.redis.interpreters.RedisService
-import org.typelevel.log4cats.Logger
 
 import scala.concurrent.duration.FiniteDuration
 
 object Interpreters {
-  def live[F[_]: ContextShift: Concurrent: Logger](redisClient: RedisClient, expiration: FiniteDuration): RedisService[F] =
-    RedisService[F](redisClient, expiration)
+  def live[F[_]: Concurrent](
+      commands: RedisCommands[F, String, String],
+      expiration: FiniteDuration
+  ): RedisService[F] =
+    RedisService[F](commands, expiration)
 }

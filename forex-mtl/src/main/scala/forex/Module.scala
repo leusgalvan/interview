@@ -1,7 +1,7 @@
 package forex
 
-import cats.effect.{Concurrent, ContextShift, Timer}
-import dev.profunktor.redis4cats.connection.RedisClient
+import cats.effect.{Concurrent, Timer}
+import dev.profunktor.redis4cats.RedisCommands
 import forex.config.ApplicationConfig
 import forex.http.rates.RatesHttpRoutes
 import forex.services._
@@ -13,13 +13,13 @@ import org.http4s.server.middleware.{AutoSlash, Timeout, Logger => ServerLogMidd
 import org.http4s.client.middleware.{Logger => ClientLogMiddleware}
 import org.typelevel.log4cats.Logger
 
-class Module[F[_]: Concurrent: Timer: ContextShift: Logger](
+class Module[F[_]: Concurrent: Timer: Logger](
     config: ApplicationConfig,
-    redisClient: RedisClient,
+    redisCommands: RedisCommands[F, String, String],
     httpClient: Client[F]
 ) {
 
-  private val redisService: RedisService[F] = RedisServices.live[F](redisClient, config.redis.expiration)
+  private val redisService: RedisService[F] = RedisServices.live[F](redisCommands, config.redis.expiration)
 
   private val ratesService: RatesService[F] = RatesServices.live[F](
     ClientLogMiddleware(logHeaders = false, logBody = true)(httpClient),
