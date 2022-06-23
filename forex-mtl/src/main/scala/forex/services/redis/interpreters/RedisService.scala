@@ -5,16 +5,15 @@ import cats.implicits._
 import dev.profunktor.redis4cats.Redis
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.data.RedisCodec
-import dev.profunktor.redis4cats.effect.Log.NoOp._
+import dev.profunktor.redis4cats.log4cats._
 import forex.domain.Rate
 import forex.services.redis.Algebra
 import forex.services.redis.errors._
+import org.typelevel.log4cats.Logger
+
 import scala.concurrent.duration._
 
-class RedisService[F[_]](client: RedisClient, expiration: FiniteDuration)(implicit
-    cs: ContextShift[F],
-    concurrent: Concurrent[F]
-) extends Algebra[F] {
+class RedisService[F[_]: Concurrent: ContextShift: Logger](client: RedisClient, expiration: FiniteDuration) extends Algebra[F] {
   import forex.services.redis.Protocol._
 
   override def get(pair: Rate.Pair): F[Either[Error, Option[Rate]]] = {
@@ -47,8 +46,6 @@ class RedisService[F[_]](client: RedisClient, expiration: FiniteDuration)(implic
 }
 
 object RedisService {
-  def apply[F[_]](client: RedisClient, expiration: FiniteDuration)(implicit
-    cs: ContextShift[F],
-    concurrent: Concurrent[F]
-  ): RedisService[F] = new RedisService[F](client, expiration)
+  def apply[F[_]: Concurrent: ContextShift: Logger](client: RedisClient, expiration: FiniteDuration): RedisService[F] =
+    new RedisService[F](client, expiration)
 }

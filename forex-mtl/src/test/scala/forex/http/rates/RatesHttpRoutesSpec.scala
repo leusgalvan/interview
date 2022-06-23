@@ -13,8 +13,12 @@ import org.http4s._
 import Converters._
 import forex.programs.rates.errors.Error.RateLookupFailed
 import org.http4s.Status.{BadRequest, InternalServerError}
+import org.typelevel.log4cats._
+import org.typelevel.log4cats.slf4j._
 
 class RatesHttpRoutesSpec extends AnyFunSuite {
+  implicit val logger: Logger[IO] = LoggerFactory[IO].getLogger
+
   test("return 200 OK when two valid currencies are provided") {
     val rate = Rate(Pair(Currency.USD, Currency.CAD), Price.fromInt(10), Timestamp.now)
     val ratesProgram = new Algebra[IO] {

@@ -51,7 +51,9 @@ resolvers +=
 
 libraryDependencies ++= Seq(
   compilerPlugin(Libraries.kindProjector),
-  Libraries.redis4cats,
+  Libraries.log4cats,
+  Libraries.redis4catsCore,
+  Libraries.redis4catsLogs,
   Libraries.cats,
   Libraries.catsEffect,
   Libraries.fs2,

@@ -6,21 +6,25 @@ import forex.config.ApplicationConfig
 import forex.http.rates.RatesHttpRoutes
 import forex.services._
 import forex.programs._
-import forex.services.redis.interpreters.RedisService
 import org.http4s._
 import org.http4s.client.Client
 import org.http4s.implicits._
-import org.http4s.server.middleware.{AutoSlash, Timeout}
+import org.http4s.server.middleware.{AutoSlash, Timeout, Logger => ServerLogMiddleware}
+import org.http4s.client.middleware.{Logger => ClientLogMiddleware}
+import org.typelevel.log4cats.Logger
 
-class Module[F[_]: Concurrent: Timer: ContextShift](
+class Module[F[_]: Concurrent: Timer: ContextShift: Logger](
     config: ApplicationConfig,
     redisClient: RedisClient,
     httpClient: Client[F]
 ) {
+
   private val redisService: RedisService[F] = RedisServices.live[F](redisClient, config.redis.expiration)
 
   private val ratesService: RatesService[F] = RatesServices.live[F](
-    httpClient, config.oneFrame.host, config.oneFrame.port
+    ClientLogMiddleware(logHeaders = false, logBody = true)(httpClient),
+    config.oneFrame.host,
+    config.oneFrame.port
   )
 
   private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, redisService)
@@ -37,7 +41,9 @@ class Module[F[_]: Concurrent: Timer: ContextShift](
   }
 
   private val appMiddleware: TotalMiddleware = { http: HttpApp[F] =>
-    Timeout(config.http.timeout)(http)
+    ServerLogMiddleware.httpApp(logHeaders = false, logBody = true)(
+      Timeout(config.http.timeout)(http)
+    )
   }
 
   private val http: HttpRoutes[F] = ratesHttpRoutes

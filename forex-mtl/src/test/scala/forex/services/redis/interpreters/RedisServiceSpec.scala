@@ -6,6 +6,8 @@ import forex.domain.{Currency, Price, Rate, Timestamp}
 import forex.domain.Rate.Pair
 import org.scalatest.funsuite.AnyFunSuite
 import dev.profunktor.redis4cats.effect.Log.NoOp._
+import org.typelevel.log4cats._
+import org.typelevel.log4cats.slf4j._
 
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
@@ -15,7 +17,7 @@ class RedisServiceSpec extends AnyFunSuite {
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   implicit val cs: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
-
+  implicit val logger: Logger[IO] = LoggerFactory[IO].getLogger
   private val redisUri = "redis://localhost:6379"
   private val defaultExpiration = 5.seconds
 
