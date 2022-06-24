@@ -33,7 +33,8 @@ class Module[F[_]: Concurrent: Timer: Logger](
   private val ratesService: RatesService[F] = RatesServices.live[F](
     oneFrameClient,
     config.oneFrame.host,
-    config.oneFrame.port
+    config.oneFrame.port,
+    config.oneFrame.token
   )
 
   private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, redisService)
