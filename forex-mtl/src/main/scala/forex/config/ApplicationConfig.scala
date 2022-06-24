@@ -22,5 +22,7 @@ case class RedisConfig(
 
 case class OneFrameConfig(
     host: String,
-    port: Int
+    port: Int,
+    maxRetries: Int,
+    maxWaitRetry: FiniteDuration
 )

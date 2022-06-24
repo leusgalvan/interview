@@ -10,7 +10,7 @@ import org.http4s._
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.server.middleware.{AutoSlash, Timeout, Logger => ServerLogMiddleware}
-import org.http4s.client.middleware.{Logger => ClientLogMiddleware}
+import org.http4s.client.middleware.{Retry, RetryPolicy, Logger => ClientLogMiddleware}
 import org.typelevel.log4cats.Logger
 
 class Module[F[_]: Concurrent: Timer: Logger](
@@ -21,8 +21,17 @@ class Module[F[_]: Concurrent: Timer: Logger](
 
   private val redisService: RedisService[F] = RedisServices.live[F](redisCommands, config.redis.expiration)
 
+  private val oneFrameClient = {
+    val withRetries = (client: Client[F]) =>
+      Retry[F](RetryPolicy(backoff = RetryPolicy.exponentialBackoff(config.oneFrame.maxWaitRetry, config.oneFrame.maxRetries))
+    )(client)
+    val withLogging = (client: Client[F]) => ClientLogMiddleware(logHeaders = false, logBody = true)(client)
+
+    withRetries(withLogging(httpClient))
+  }
+
   private val ratesService: RatesService[F] = RatesServices.live[F](
-    ClientLogMiddleware(logHeaders = false, logBody = true)(httpClient),
+    oneFrameClient,
     config.oneFrame.host,
     config.oneFrame.port
   )
