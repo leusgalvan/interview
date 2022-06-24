@@ -42,10 +42,10 @@ class RatesHttpRoutesSpec extends AnyFunSuite {
     val routes = new RatesHttpRoutes[IO](ratesProgram)
     val request = Request[IO](method = Method.GET, uri = uri"/rates?from=AAA&to=CAD")
     val response = routes.routes.orNotFound.run(request).unsafeRunSync()
-    val body = response.as[String].unsafeRunSync()
+    val body = response.as[ErrorResponse].unsafeRunSync()
 
     assert(response.status == BadRequest)
-    assert(body == "unrecognized currency: AAA")
+    assert(body == ErrorResponse(List("unrecognized currency: AAA")))
   }
 
   test("return 400 Bad Request when to currency is invalid") {
@@ -57,10 +57,10 @@ class RatesHttpRoutesSpec extends AnyFunSuite {
     val routes = new RatesHttpRoutes[IO](ratesProgram)
     val request = Request[IO](method = Method.GET, uri = uri"/rates?from=USD&to=AAA")
     val response = routes.routes.orNotFound.run(request).unsafeRunSync()
-    val body = response.as[String].unsafeRunSync()
+    val body = response.as[ErrorResponse].unsafeRunSync()
 
     assert(response.status == BadRequest)
-    assert(body == "unrecognized currency: AAA")
+    assert(body == ErrorResponse(List("unrecognized currency: AAA")))
   }
 
   test("return 400 Bad Request when both currencies are invalid") {
@@ -72,10 +72,10 @@ class RatesHttpRoutesSpec extends AnyFunSuite {
     val routes = new RatesHttpRoutes[IO](ratesProgram)
     val request = Request[IO](method = Method.GET, uri = uri"/rates?from=AAA&to=BBB")
     val response = routes.routes.orNotFound.run(request).unsafeRunSync()
-    val body = response.as[String].unsafeRunSync()
+    val body = response.as[ErrorResponse].unsafeRunSync()
 
     assert(response.status == BadRequest)
-    assert(body == "unrecognized currency: AAA && unrecognized currency: BBB")
+    assert(body == ErrorResponse(List("unrecognized currency: AAA",  "unrecognized currency: BBB")))
   }
 
   test("return 500 Internal Server Error when rates lookup fails with lookup error") {
@@ -86,10 +86,10 @@ class RatesHttpRoutesSpec extends AnyFunSuite {
     val routes = new RatesHttpRoutes[IO](ratesProgram)
     val request = Request[IO](method = Method.GET, uri = uri"/rates?from=USD&to=CAD")
     val response = routes.routes.orNotFound.run(request).unsafeRunSync()
-    val body = response.as[String].unsafeRunSync()
+    val body = response.as[ErrorResponse].unsafeRunSync()
 
     assert(response.status == InternalServerError)
-    assert(body == "lookup error")
+    assert(body == ErrorResponse(List("lookup error")))
   }
 
   test("return 500 Internal Server Error when rates lookup fails with unhandled error") {
@@ -100,9 +100,9 @@ class RatesHttpRoutesSpec extends AnyFunSuite {
     val routes = new RatesHttpRoutes[IO](ratesProgram)
     val request = Request[IO](method = Method.GET, uri = uri"/rates?from=USD&to=CAD")
     val response = routes.routes.orNotFound.run(request).unsafeRunSync()
-    val body = response.as[String].unsafeRunSync()
+    val body = response.as[ErrorResponse].unsafeRunSync()
 
     assert(response.status == InternalServerError)
-    assert(body == "unhandled error")
+    assert(body == ErrorResponse(List("unhandled error")))
   }
 }

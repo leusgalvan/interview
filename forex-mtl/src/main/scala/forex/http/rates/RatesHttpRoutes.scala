@@ -32,11 +32,10 @@ class RatesHttpRoutes[F[_]: Sync: Logger](rates: RatesProgram[F]) extends Http4s
             .handleErrorWith {
               case NonFatal(e) =>
                 Logger[F].error(e)("Rate lookup failed") *>
-                InternalServerError(e.getMessage)
+                InternalServerError(ErrorResponse(List(e.getMessage)))
             }
         case Invalid(errors) =>
-          val msg = errors.map(_.message).mkString_("", " && ", "")
-          BadRequest(msg)
+          BadRequest(ErrorResponse(errors.map(_.getMessage).toList))
       }
   }
 

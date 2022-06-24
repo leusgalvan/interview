@@ -26,6 +26,10 @@ object Protocol {
       timestamp: Timestamp
   )
 
+  final case class ErrorResponse(
+      errors: List[String]
+  )
+
   implicit val currencyEncoder: Encoder[Currency] =
     Encoder.instance[Currency] { show.show _ andThen Json.fromString }
 
@@ -49,6 +53,12 @@ object Protocol {
 
   implicit val responseDecoder: Decoder[GetApiResponse] =
     deriveConfiguredDecoder[GetApiResponse]
+
+  implicit val errorResponseEncoder: Encoder[ErrorResponse] =
+    deriveConfiguredEncoder[ErrorResponse]
+
+  implicit val errorResponseDecoder: Decoder[ErrorResponse] =
+    deriveConfiguredDecoder[ErrorResponse]
 
   implicit val timestampDecoder: Decoder[Timestamp] =
     Decoder[OffsetDateTime].map(Timestamp.apply)
