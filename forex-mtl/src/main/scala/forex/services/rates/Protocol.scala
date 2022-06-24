@@ -19,7 +19,7 @@ object Protocol {
   final case class OneFrameRate(
     from: String,
     to: String,
-    price: Double,
+    price: BigDecimal,
     time_stamp: OffsetDateTime
   )
 

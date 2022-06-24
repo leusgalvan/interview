@@ -17,7 +17,7 @@ object Converters {
         for {
           from <- parseCurrency(oneFrameRate.from)
           to <- parseCurrency(oneFrameRate.to)
-          price = Price(BigDecimal.decimal(oneFrameRate.price))
+          price = Price(oneFrameRate.price)
           timestamp = Timestamp(oneFrameRate.time_stamp)
         } yield Rate(Pair(from, to), price, timestamp)
       }
