@@ -26,9 +26,9 @@ class ProgramSpec extends AnyFunSuite {
       IO(Left(error))
   }
 
-  private def constRedisService(rateOpt: Option[Rate]): RedisService[IO] = new redis.Algebra[IO] {
+  private def mapRedisService(rateMap: Map[Pair, Rate]): RedisService[IO] = new redis.Algebra[IO] {
     override def get(pair: Pair): IO[Either[errors.Error, Option[Rate]]] =
-      IO(Right(rateOpt))
+      IO(Right(rateMap.get(pair)))
 
     override def write(rate: Rate): IO[Either[errors.Error, Unit]] =
       IO(Right(()))
@@ -37,6 +37,9 @@ class ProgramSpec extends AnyFunSuite {
       IO(Right(0))
   }
 
+  private def constRedisService(rateOpt: Option[Rate]): RedisService[IO] =
+    mapRedisService(rateOpt.fold(Map.empty[Pair, Rate])(rate => Map(rate.pair -> rate)))
+
   test("return cached rate when present in redis") {
     val rate = Rate(Pair(Currency.USD, Currency.CAD), Price.fromInt(10), Timestamp.now)
     val ratesService: RatesService[IO] = new rates.Algebra[IO] {
@@ -44,6 +47,21 @@ class ProgramSpec extends AnyFunSuite {
         IO.raiseError(new Exception("should not be called"))
     }
     val redisService: RedisService[IO] = constRedisService(Some(rate))
+    val program = Program[IO](ratesService, redisService)
+    val request = GetRatesRequest(from = Currency.USD, to = Currency.CAD)
+    val result = program.get(request).unsafeRunSync()
+    assert(result == Right(rate))
+  }
+
+  test("return inverse cached rate when inverse rate present in redis") {
+    val timestamp = Timestamp.now
+    val rate = Rate(Pair(Currency.USD, Currency.CAD), Price.fromInt(10), timestamp)
+    val inverseRate = Rate(Pair(Currency.CAD, Currency.USD), Price(0.1), timestamp)
+    val ratesService: RatesService[IO] = new rates.Algebra[IO] {
+      override def get(pair: Pair): IO[Either[rates.errors.Error, Rate]] =
+        IO.raiseError(new Exception("should not be called"))
+    }
+    val redisService: RedisService[IO] = constRedisService(Some(inverseRate))
     val program = Program[IO](ratesService, redisService)
     val request = GetRatesRequest(from = Currency.USD, to = Currency.CAD)
     val result = program.get(request).unsafeRunSync()
