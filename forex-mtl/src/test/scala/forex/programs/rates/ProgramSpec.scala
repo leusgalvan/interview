@@ -40,6 +40,32 @@ class ProgramSpec extends AnyFunSuite {
   private def constRedisService(rateOpt: Option[Rate]): RedisService[IO] =
     mapRedisService(rateOpt.fold(Map.empty[Pair, Rate])(rate => Map(rate.pair -> rate)))
 
+  val dummyRatesService: RatesService[IO] = new rates.Algebra[IO] {
+    override def get(pair: Pair): IO[Either[rates.errors.Error, Rate]] =
+      IO.raiseError(new Exception("should not be called"))
+  }
+
+  val dummyRedisService: RedisService[IO] = new redis.Algebra[IO] {
+    override def get(pair: Pair): IO[Either[errors.Error, Option[Rate]]] =
+      IO.raiseError(new Exception("should not be called"))
+
+    override def write(rate: Rate): IO[Either[errors.Error, Unit]] =
+      IO.raiseError(new Exception("should not be called"))
+
+    override def delete(pair: Pair): IO[Either[errors.Error, Long]] =
+      IO.raiseError(new Exception("should not be called"))
+  }
+
+  test("Return immediately when from and to currencies are the same") {
+    val rate = Rate(Pair(Currency.USD, Currency.USD), Price.fromInt(1), Timestamp.now)
+    val ratesService = dummyRatesService
+    val redisService = dummyRedisService
+    val program = Program[IO](ratesService, redisService)
+    val request = GetRatesRequest(from = Currency.USD, to = Currency.USD)
+    val result = program.get(request).unsafeRunSync().map(_.copy(timestamp = rate.timestamp))
+    assert(result == Right(rate))
+  }
+
   test("return cached rate when present in redis") {
     val rate = Rate(Pair(Currency.USD, Currency.CAD), Price.fromInt(10), Timestamp.now)
     val ratesService: RatesService[IO] = new rates.Algebra[IO] {
