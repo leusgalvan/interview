@@ -1,44 +1,47 @@
 <img src="/paidy.png?raw=true" width=300 style="background-color:white;">
 
-# Paidy Take-Home Coding Exercises
+# Solution to the Paidy take home exercise
 
-## What to expect?
-We understand that your time is valuable, and in anyone's busy schedule solving these exercises may constitute a fairly substantial chunk of time, so we really appreciate any effort you put in to helping us build a solid team.
+## Assumptions regarding the requirements
+- Tokens are like api keys, meaning they do not expire and don't need to be refreshed. We can then store them in an environment variable.
+- The test token is safe to embed in code, for example to write some tests against the OneFrame API.
+- Only currencies provided in Currency.scala are supported (even if OneFrame supports more).
+- Rates from OneFrame come up-to-date, meaning we can cache them for 5 minutes and not break the 5 minutes requirement.
+- If the rate from currency A to currency B is R, then the rate from B to A is 1/R.
+- If the rate from currency A to B is R1 and the rate from currency B to C is R2, then the rate from A to C is R1 * R2
 
-## What we are looking for?
-**Keep it simple**. Read the requirements and restrictions carefully and focus on solving the problem.
+## Caching
+### Description
+In order to help fulfill 10,000 requests for a single token we are going to use a Redis cache to store the results from OneFrame. We will expire keys after 5 minutes to make sure rates stay up-to-date (at most 5 minutes old). 
 
-**Treat it like production code**. That is, develop your software in the same way that you would for any code that is intended to be deployed to production. These may be toy exercises, but we really would like to get an idea of how you build code on a day-to-day basis.
+Caching alone is not enough to prevent us from calling OneFrame more than 1,000 times. We'll use some optimizations.
 
-## How to submit?
-You can do this however you see fit - you can email us a tarball, a pointer to download your code from somewhere or just a link to a source control repository. Make sure your submission includes a small **README**, documenting any assumptions, simplifications and/or choices you made, as well as a short description of how to run the code and/or tests. Finally, to help us review your code, please split your commit history in sensible chunks (at least separate the initial provided code from your personal additions).
+First, we will use the fact that if we have the rate of A to B and B to C, we can calculate the rate of A to C as their product. 
+We can then sort currencies by some criteria (e.g. alphabetically) to get a sequence C<sub>1</sub>, ..., C<sub>n</sub>. 
+Once we have that sorted sequence, we can get the rates for every pair (C<sub>i</sub>, C<sub>i+1</sub>) and store them in a cache (i.e. Redis).
+Lastly, we can calculate the rate for any pair (C<sub>i</sub>, C<sub>j</sub>) where i < j just by multiplying all the rates (C<sub>i</sub>, C<sub>i+1</sub>), (C<sub>i+1</sub>, C<sub>i+2</sub>),..., (C<sub>j-1</sub>, C<sub>j</sub>), without the need to fetch from OneFrame.
 
-## The Interview:
-After you submit your code, we will contact you to discuss and potentially arrange an in-person interview with some of the team.
-The interview will cover a wide range of technical and social aspects relevant to working at Paidy, but importantly for this exercise: we will also take the opportunity to step through your submitted code with you.
+Second, we can calculate rates for pairs (C<sub>i</sub>, C<sub>j</sub>) where i > j by using the assumption that rate(C<sub>i</sub>, C<sub>j</sub>) == 1/rate(C<sub>j</sub>, C<sub>i</sub>). That is, we can get the rate R for pair (C<sub>j</sub>, C<sub>i</sub>) with the same procedure as before and then just return 1/R. 
 
-## The Exercises:
-### 1. [Platform] Build an API for managing users
-The complete specification for this exercise can be found in the [UsersAPI.md](UsersAPI.md).
+Finally, the case where C<sub>i</sub> == C<sub>j</sub> does not need any calculation as it is always 1.
 
-### 2. [Frontend] Build a SPA that displays currency exchange rates
-The complete specification for this exercise can be found in the [Forex-UI.md](Forex-UI.md).
+### Analysis
+We have 9 supported currencies. This means the cache will contain 8 pairs. Assuming we refresh them every 5 minutes, and considering a day has 1440 minutes, we will need 1440 / 5 = 288 calls to OneFrame.
 
-### 3. [Platform] Build a local proxy for currency exchange rates
-The complete specification for this exercise can be found in the [Forex.md](Forex.md).
+## Running the application
+In order to run the application, execute the following commands:
 
-### 5. [Platform] Build an API for managing a restaurant
-The complete specification for this exercise can be found at [SimpleRestaurantApi.md](SimpleRestaurantApi.md)
+> cd forex-mtl
 
-## F.A.Q.
-1) _Is it OK to share your solutions publicly?_
-Yes, the questions are not prescriptive, the process and discussion around the code is the valuable part. You do the work, you own the code. Given we are asking you to give up your time, it is entirely reasonable for you to keep and use your solution as you see fit.
+> sudo chmod +x run.sh
 
-2) _Should I do X?_
-For any value of X, it is up to you, we intentionally leave the problem a little open-ended and will leave it up to you to provide us with what you see as important. Just remember to keep it simple. If it's a feature that is going to take you a couple of days, it's not essential.
+> ./run.sh
 
-3) _Something is ambiguous, and I don't know what to do?_
-The first thing is: don't get stuck. We really don't want to trip you up intentionally, we are just attempting to see how you approach problems. That said, there are intentional ambiguities in the specifications, mainly to see how you fill in those gaps, and how you make design choices.
-If you really feel stuck, our first preference is for you to make a decision and document it with your submission - in this case there is really no wrong answer. If you feel it is not possible to do this, just send us an email and we will try to clarify or correct the question for you.
+## Running the tests
+To run the tests, execute:
 
-Good luck!
+> cd forex-mtl
+
+> sudo chmod +x test.sh
+
+> ./test.sh
