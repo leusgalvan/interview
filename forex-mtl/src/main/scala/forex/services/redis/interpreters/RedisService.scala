@@ -1,6 +1,6 @@
 package forex.services.redis.interpreters
 
-import cats.effect.Concurrent
+import cats.Functor
 import cats.implicits._
 import dev.profunktor.redis4cats.RedisCommands
 import forex.domain.Rate
@@ -9,37 +9,33 @@ import forex.services.redis.errors._
 
 import scala.concurrent.duration._
 
-class RedisService[F[_]: Concurrent](
+class RedisService[F[_]: Functor](
     commands: RedisCommands[F, String, String],
     expiration: FiniteDuration
 ) extends Algebra[F] {
   import forex.services.redis.Protocol._
 
-  override def get(pair: Rate.Pair): F[Either[Error, Option[Rate]]] = {
-    commands
-      .get(toRedisKey(pair))
+  override def get: F[Either[Error, List[Rate]]] = {
+    commands.get(ratesKey)
       .map {
-        case Some(value) =>
-          fromRedisValue(value).map(Option.apply)
+        case Some(rates) =>
+          fromRedisValue(rates)
         case None =>
-          Right(None)
+          Right(Nil)
       }
   }
 
-  override def write(rate: Rate): F[Either[Error, Unit]] = {
-    val key = toRedisKey(rate.pair)
-    val value = toRedisValue(rate)
-    commands.setEx(key, value, expiration).map(Right.apply)
+  override def write(rates: List[Rate]): F[Either[Error, Unit]] = {
+    commands.setEx(ratesKey, toRedisValue(rates), expiration).map(Right.apply)
   }
 
-  override def delete(pair: Rate.Pair): F[Either[Error, Long]] = {
-    val key = toRedisKey(pair)
-    commands.del(key).map(Right.apply)
+  override def delete: F[Either[Error, Long]] = {
+    commands.del(ratesKey).map(Right.apply)
   }
 }
 
 object RedisService {
-  def apply[F[_]: Concurrent](
+  def apply[F[_]: Functor](
      commands: RedisCommands[F, String, String],
      expiration: FiniteDuration
   ): RedisService[F] =

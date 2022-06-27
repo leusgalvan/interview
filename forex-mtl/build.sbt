@@ -56,6 +56,7 @@ libraryDependencies ++= Seq(
   Libraries.redis4catsLogs,
   Libraries.cats,
   Libraries.catsEffect,
+  Libraries.catsTime,
   Libraries.fs2,
   Libraries.http4sDsl,
   Libraries.http4sServer,

@@ -4,9 +4,9 @@ import forex.domain.Rate
 import forex.services.redis.errors.Error
 
 trait Algebra[F[_]] {
-  def get(pair: Rate.Pair): F[Error Either Option[Rate]]
+  def get: F[Error Either List[Rate]]
 
-  def write(rate: Rate): F[Error Either Unit]
+  def write(rates: List[Rate]): F[Error Either Unit]
 
-  def delete(pair: Rate.Pair): F[Error Either Long]
+  def delete: F[Error Either Long]
 }

@@ -12,6 +12,9 @@ object errors {
   object Error {
     final case class RateLookupFailed(msg: String) extends Error
     final case class RedisFailed(msg: String) extends Error
+    final case class MissingCachedRate(from: String, to: String) extends Error {
+      val msg: String = s"Missing rate in cache. From: $from, To: $to"
+    }
   }
 
   def fromRatesError(error: RatesServiceError): Error = error match {

@@ -1,5 +1,6 @@
 package forex
 
+import cats.Parallel
 import cats.effect.{Concurrent, Timer}
 import dev.profunktor.redis4cats.RedisCommands
 import forex.config.ApplicationConfig
@@ -13,7 +14,7 @@ import org.http4s.server.middleware.{AutoSlash, Timeout, Logger => ServerLogMidd
 import org.http4s.client.middleware.{Retry, RetryPolicy, Logger => ClientLogMiddleware}
 import org.typelevel.log4cats.Logger
 
-class Module[F[_]: Concurrent: Timer: Logger](
+class Module[F[_]: Concurrent: Timer: Logger: Parallel](
     config: ApplicationConfig,
     redisCommands: RedisCommands[F, String, String],
     httpClient: Client[F]

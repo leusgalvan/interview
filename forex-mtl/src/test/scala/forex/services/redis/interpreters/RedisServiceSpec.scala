@@ -5,7 +5,6 @@ import dev.profunktor.redis4cats.Redis
 import dev.profunktor.redis4cats.connection.RedisClient
 import dev.profunktor.redis4cats.data.RedisCodec
 import forex.domain.{Currency, Price, Rate, Timestamp}
-import forex.domain.Rate.Pair
 import org.scalatest.funsuite.AnyFunSuite
 import dev.profunktor.redis4cats.effect.Log.NoOp._
 import org.typelevel.log4cats._
@@ -32,31 +31,30 @@ class RedisServiceSpec extends AnyFunSuite {
     }.unsafeRunSync()
   }
 
+  private val rates = Currency.all.zip(Currency.all.tail).map { case (from, to) =>
+    Rate(Rate.Pair(from, to), Price(BigDecimal(math.random())), Timestamp.now)
+  }
+
   // docker pull redis
   // docker run -p 6379:6379 redis
   test("Getting a non-existing value yields None") {
-    val currencies = Pair(Currency.USD, Currency.CAD)
     val result = withService(defaultExpiration) { service =>
-      service.delete(currencies) *> service.get(currencies)
+      service.delete *> service.get
     }
-    assert(result == Right(None))
+    assert(result == Right(List.empty))
   }
 
   test("Writing a value and then reading it yields the value") {
-    val currencies = Pair(Currency.USD, Currency.CAD)
-    val rate = Rate(currencies, Price.fromInt(10), Timestamp.now)
     val result = withService(defaultExpiration) { service =>
-      service.delete(currencies) *> service.write(rate) *> service.get(currencies)
+      service.delete *> service.write(rates) *> service.get
     }
-    assert(result == Right(Some(rate)))
+    assert(result == Right(rates))
   }
 
   test("Values expire in provided duration") {
-    val currencies = Pair(Currency.USD, Currency.CAD)
-    val rate = Rate(currencies, Price.fromInt(10), Timestamp.now)
     val result = withService(1.second) { service =>
-      service.delete(currencies) *> service.write(rate) *> IO.sleep(1100.millis) *> service.get(currencies)
+      service.delete *> service.write(rates) *> IO.sleep(1100.millis) *> service.get
     }
-    assert(result == Right(None))
+    assert(result == Right(List.empty))
   }
 }

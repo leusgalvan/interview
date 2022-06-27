@@ -7,6 +7,7 @@ object Dependencies {
     val redis4cats          = "0.13.1"
     val cats                = "2.5.0"
     val catsEffect          = "2.4.1"
+    val catsTime            = "0.5.0"
     val fs2                 = "2.5.4"
     val http4s              = "0.21.22"
     val circe               = "0.13.0"
@@ -26,6 +27,7 @@ object Dependencies {
     lazy val log4cats            = "org.typelevel"         %% "log4cats-slf4j"             % Versions.log4cats
     lazy val cats                = "org.typelevel"         %% "cats-core"                  % Versions.cats
     lazy val catsEffect          = "org.typelevel"         %% "cats-effect"                % Versions.catsEffect
+    lazy val catsTime            = "org.typelevel"         %% "cats-time"                  % Versions.catsTime
     lazy val fs2                 = "co.fs2"                %% "fs2-core"                   % Versions.fs2
 
     lazy val redis4catsLogs      = redis4cats("redis4cats-log4cats")

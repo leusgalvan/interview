@@ -1,5 +1,7 @@
 package forex
 
+import cats.Parallel
+
 import scala.concurrent.ExecutionContext
 import cats.effect._
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
@@ -23,7 +25,7 @@ object Main extends IOApp {
 
 }
 
-class Application[F[_]: ConcurrentEffect: Timer: ContextShift: Logger] {
+class Application[F[_]: ConcurrentEffect: Timer: ContextShift: Logger: Parallel] {
   private def makeResources(config: ApplicationConfig, ec: ExecutionContext): Resource[F, (RedisCommands[F, String, String], Client[F])] = {
     for {
       redisURI <- Resource.eval(RedisURI.make[F](
