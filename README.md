@@ -26,8 +26,18 @@ Second, we can calculate rates for pairs (C<sub>i</sub>, C<sub>j</sub>) where i 
 Finally, the case where C<sub>i</sub> == C<sub>j</sub> does not need any calculation as it is always 1.
 
 ### Analysis
-We have 9 supported currencies. This means the cache will contain 8 pairs. Assuming we refresh them every 5 minutes, and considering a day has 1440 minutes, we will need 1440 / 5 = 288 calls to OneFrame.
+We have 9 supported currencies. This means the cache will contain 8 pairs. Assuming we refresh them every 5 minutes, and considering a day has 1440 minutes, we will need at most 8 * 1440 / 5 = 2304 calls to OneFrame. 
 
+In this implementation we make 8 calls in each refresh, meaning we have 125 refreshes before we hit the quota. So we would need to satisfy 10,000 in with at most 125 refreshes. So in order to work we have to assume some of the requests are gonna be returned from the cache. For example, having a rate of at least 80 requests in each of the 5 minutes intervals would fulfill the requirement.
+
+The reason to fetch 8 pairs all at once instead of separately by need, is to have consistent timestamps when calculating the product of rates.
+
+### Alternative solution
+An alternative solution (release v0.2.0) is to not cache those 8 adjacent pairs at once but rather each pair (C<sub>i</sub>, C<sub>j</sub>) on demand as long as i < j. Then we can leverage the fact that (C<sub>i</sub>, C<sub>j</sub>) == 1/rate(C<sub>j</sub>, C<sub>i</sub>) to cater for the rest. And we would of course ignores pairs where i == j.
+
+In this solution, for the worst case we would have 9 * 8 / 2 = 36 pairs refetched every 5 minutes, for a maximum of 36 * 1440 / 5 = 10368 calls to OneFrame. meaning no help from the cache whatsover. But this solution would help if some currencies are more often used than other ones. For example if we only used 3 pairs, we would be garanteed to fulfill the 1,000 requests requirement.
+
+So in order to pass the requirement, we would need our service to be called 
 ## Running the application
 In order to run the application, execute the following commands:
 
