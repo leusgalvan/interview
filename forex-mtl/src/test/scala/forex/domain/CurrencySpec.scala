@@ -1,12 +1,16 @@
 package forex.domain
 
-import org.scalatest.funsuite.AnyFunSuite
+import cats.kernel.Order
+import cats.kernel.laws.discipline.OrderTests
+import forex.BaseSpec
 
-class CurrencySpec extends AnyFunSuite {
+class CurrencySpec extends BaseSpec {
   import Currency._
 
   test("Path of length 0") {
-    assert(findPath(USD, USD).isEmpty)
+    forAll { (currency: Currency) =>
+      assert(findPath(currency, currency).isEmpty)
+    }
   }
 
   test("Path of length 1") {
@@ -18,19 +22,25 @@ class CurrencySpec extends AnyFunSuite {
   }
 
   test("Path of max length") {
-    assert(findPath(AUD, USD) == List(
-      Rate.Pair(AUD, CAD),
-      Rate.Pair(CAD, CHF),
-      Rate.Pair(CHF, EUR),
-      Rate.Pair(EUR, GBP),
-      Rate.Pair(GBP, JPY),
-      Rate.Pair(JPY, NZD),
-      Rate.Pair(NZD, SGD),
-      Rate.Pair(SGD, USD)
-    ))
+    assert(
+      findPath(AUD, USD) == List(
+        Rate.Pair(AUD, CAD),
+        Rate.Pair(CAD, CHF),
+        Rate.Pair(CHF, EUR),
+        Rate.Pair(EUR, GBP),
+        Rate.Pair(GBP, JPY),
+        Rate.Pair(JPY, NZD),
+        Rate.Pair(NZD, SGD),
+        Rate.Pair(SGD, USD)
+      )
+    )
   }
 
   test("Reverse path is empty") {
-    assert(findPath(JPY, CAD).isEmpty)
+    forAll { (c1: Currency, c2: Currency) =>
+      assert(findPath(Order.max(c1, c2), Order.min(c1, c2)).isEmpty)
+    }
   }
+
+  checkAll("Order[Currency]", OrderTests[Currency].order)
 }
