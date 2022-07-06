@@ -1,16 +1,15 @@
 package forex.services.rates.interpreters
 
 import cats.effect.{ContextShift, IO}
-import forex.domain.Currency
+import forex.BaseSpec
 import forex.domain.Rate.Pair
 import org.http4s.client.blaze.BlazeClientBuilder
-import org.scalatest.funsuite.AnyFunSuite
 
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
-import fs2._
+import org.scalacheck.Gen
 
-class OneFrameServiceSpec extends AnyFunSuite {
+class OneFrameServiceSpec extends BaseSpec {
   implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   implicit val cs: ContextShift[IO] = IO.contextShift(ec)
   val host = "localhost"
@@ -18,13 +17,14 @@ class OneFrameServiceSpec extends AnyFunSuite {
   val token = "10dc303535874aeccc86a8251e6992f5"
 
   // Required local OneFrame docker image running
+  val pairsGen: Gen[List[Pair]] = Gen.atLeastOne(Pair.all).map(_.toList)
   test("multiple real calls") {
-    val attempts = 1001L // ensure quota is reached
-    val result = BlazeClientBuilder[IO](ec).resource.use { client =>
-      val service = OneFrameService(client, host, port, token)
-      val getRate = service.get(Pair(from = Currency.USD, to = Currency.CAD))
-      Stream.repeatEval(getRate).take(attempts).compile.toList
-    }.unsafeRunSync()
-    assert(result.length == attempts)
+    forAll(pairsGen) { (pairs: List[Pair]) =>
+      val result = BlazeClientBuilder[IO](ec).resource.use { client =>
+        val service = OneFrameService(client, host, port, token)
+        service.get(pairs)
+      }.unsafeRunSync()
+      println(result)
+    }
   }
 }

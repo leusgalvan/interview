@@ -6,8 +6,8 @@ import forex.services.redis.Protocol._
 
 class ProtocolSpec extends BaseSpec {
   test("Converting to and from a redis value yields the original value") {
-    forAll { (rates: List[Rate]) =>
-      assert(fromRedisValue(toRedisValue(rates)) == Right(rates))
+    forAll { (rate: Rate) =>
+      assert(fromRedisValue(toRedisValue(rate)) == Right(rate))
     }
   }
 }

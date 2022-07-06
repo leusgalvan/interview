@@ -18,10 +18,6 @@ class ProgramSpec extends BaseSpec {
 
   private val now = Timestamp.now
 
-  private val allRates = Currency.all.zip(Currency.all.tail).map { case (from, to) =>
-    Rate(Rate.Pair(from, to), Price(BigDecimal(math.random())), now)
-  }
-
   test("return immediately when from and to currencies are the same") {
     val rate = Rate(Pair(Currency.USD, Currency.USD), Price.fromInt(1), Timestamp.now)
     val ratesService = dummyRatesService
@@ -32,49 +28,24 @@ class ProgramSpec extends BaseSpec {
     assert(result == Right(rate))
   }
 
-  test("compute rate based on cached rates when present") {
-    val pair = Rate.Pair(Currency.GBP, Currency.NZD) // idx 4 and 6
+  test("return cached rate when present") {
+    val rate = Rate(Rate.Pair(Currency.NZD, Currency.GBP), Price.fromInt(5), now)
     val ratesService: RatesService[IO] = dummyRatesService
-    val redisService: RedisService[IO] = constRedisService(allRates)
+    val redisService: RedisService[IO] = constRedisService(Some(rate))
     val program = Program[IO](ratesService, redisService)
-    val request = GetRatesRequest(pair.from, pair.to)
+    val request = GetRatesRequest(rate.pair.from, rate.pair.to)
     val result = program.get(request).unsafeRunSync()
-    val expectedRate = Rate(
-      pair = pair,
-      timestamp = now,
-      price = allRates(4).price * allRates(5).price
-    )
-    assert(result == Right(expectedRate))
-  }
-
-  test("compute rate based on cached rates when present (inverse case)") {
-    val pair = Rate.Pair(Currency.NZD, Currency.GBP) // idx 6 and 4
-    val ratesService: RatesService[IO] = dummyRatesService
-    val redisService: RedisService[IO] = constRedisService(allRates)
-    val program = Program[IO](ratesService, redisService)
-    val request = GetRatesRequest(pair.from, pair.to)
-    val result = program.get(request).unsafeRunSync()
-    val expectedRate = Rate(
-      pair = pair,
-      timestamp = now,
-      price = (allRates(4).price * allRates(5).price).inverted
-    )
-    assert(result == Right(expectedRate))
+    assert(result == Right(rate))
   }
 
   test("return rate from service when NOT present in redis") {
-    val pair = Rate.Pair(Currency.GBP, Currency.NZD) // idx 4 and 6
-    val ratesService: RatesService[IO] = constRatesService(allRates)
-    val redisService: RedisService[IO] = constRedisService(List.empty)
+    val rate = Rate(Rate.Pair(Currency.NZD, Currency.GBP), Price.fromInt(5), now)
+    val ratesService: RatesService[IO] = constRatesService(List(rate))
+    val redisService: RedisService[IO] = constRedisService(Option.empty)
     val program = Program[IO](ratesService, redisService)
-    val request = GetRatesRequest(pair.from, pair.to)
+    val request = GetRatesRequest(rate.pair.from, rate.pair.to)
     val result = program.get(request).unsafeRunSync()
-    val expectedRate = Rate(
-      pair = pair,
-      timestamp = now,
-      price = allRates(4).price * allRates(5).price
-    )
-    assert(result == Right(expectedRate))
+    assert(result == Right(rate))
   }
 
   test("convert RedisLookupError given by redis service into RedisFailed") {
@@ -97,10 +68,10 @@ class ProgramSpec extends BaseSpec {
 
   test("convert OneFrameLookup error given by rates service into RateLookupFailed") {
     val ratesService: RatesService[IO] = new rates.Algebra[IO] {
-      override def get(pair: Pair): IO[Either[rates.errors.Error, Rate]] =
+      override def get(pairs: List[Pair]): IO[Either[rates.errors.Error, List[Rate]]] =
         IO(Left(rates.errors.Error.OneFrameLookupFailed("lookup failed")))
     }
-    val redisService: RedisService[IO] = constRedisService(List.empty)
+    val redisService: RedisService[IO] = constRedisService(Option.empty)
     val program = Program[IO](ratesService, redisService)
     val request = GetRatesRequest(from = Currency.USD, to = Currency.CAD)
     val result = program.get(request).unsafeRunSync()
@@ -110,10 +81,10 @@ class ProgramSpec extends BaseSpec {
   test("raise unhandled errors given by rates service") {
     val error = new Exception("unhandled error")
     val ratesService: RatesService[IO] = new rates.Algebra[IO] {
-      override def get(pair: Pair): IO[Either[rates.errors.Error, Rate]] =
+      override def get(pairs: List[Pair]): IO[Either[rates.errors.Error, List[Rate]]] =
         IO.raiseError(error)
     }
-    val redisService: RedisService[IO] = constRedisService(List.empty)
+    val redisService: RedisService[IO] = constRedisService(Option.empty)
     val program = Program[IO](ratesService, redisService)
     val request = GetRatesRequest(from = Currency.USD, to = Currency.CAD)
     val result = Try(program.get(request).unsafeRunSync())

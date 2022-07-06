@@ -1,43 +1,52 @@
 package forex.services.redis.interpreters
 
-import cats.Functor
+import cats.data.EitherT
 import cats.implicits._
-import dev.profunktor.redis4cats.RedisCommands
+import cats.{MonadError, Parallel}
+import dev.profunktor.redis4cats._
 import forex.domain.Rate
+import forex.domain.Rate.Pair
 import forex.services.redis.Algebra
 import forex.services.redis.errors._
 
 import scala.concurrent.duration._
 
-class RedisService[F[_]: Functor](
+class RedisService[F[_]: Parallel](
     commands: RedisCommands[F, String, String],
     expiration: FiniteDuration
-) extends Algebra[F] {
+)(implicit AE: MonadError[F, Throwable]) extends Algebra[F] {
   import forex.services.redis.Protocol._
 
-  override def get: F[Either[Error, List[Rate]]] = {
-    commands.get(ratesKey)
-      .map {
-        case Some(rates) =>
-          fromRedisValue(rates)
-        case None =>
-          Right(Nil)
-      }
+  override def get(pair: Pair): F[Either[Error, Option[Rate]]] = {
+    commands
+      .get(toRedisKey(pair))
+      .attemptT
+      .leftMap[Error](e => Error.RedisLookupError(e.getMessage))
+      .flatMap(x => EitherT.fromEither(x.traverse(fromRedisValue)))
+      .value
   }
 
   override def write(rates: List[Rate]): F[Either[Error, Unit]] = {
-    commands.setEx(ratesKey, toRedisValue(rates), expiration).map(Right.apply)
+    rates
+      .parTraverse_(r => commands.setEx(toRedisKey(r.pair), toRedisValue(r), expiration))
+      .attemptT
+      .leftMap[Error](e => Error.RedisWriteError(e.getMessage))
+      .value
   }
 
-  override def delete: F[Either[Error, Long]] = {
-    commands.del(ratesKey).map(Right.apply)
+  override def delete(pair: Pair): F[Either[Error, Long]] = {
+    commands
+      .del(toRedisKey(pair))
+      .attemptT
+      .leftMap[Error](e => Error.RedisDeleteError(e.getMessage))
+      .value
   }
 }
 
 object RedisService {
-  def apply[F[_]: Functor](
+  def apply[F[_]: Parallel](
      commands: RedisCommands[F, String, String],
      expiration: FiniteDuration
-  ): RedisService[F] =
+  )(implicit AE: MonadError[F, Throwable]): RedisService[F] =
     new RedisService[F](commands, expiration)
 }

@@ -25,5 +25,7 @@ object errors {
   def fromRedisError(error: RedisServiceError): Error = error match {
     case RedisServiceError.RedisLookupError(msg) => Error.RedisFailed(msg)
     case RedisServiceError.RedisMalformedValue(msg) => Error.RedisFailed(msg)
+    case RedisServiceError.RedisWriteError(msg) => Error.RedisFailed(msg)
+    case RedisServiceError.RedisDeleteError(msg) => Error.RedisFailed(msg)
   }
 }

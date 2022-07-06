@@ -19,12 +19,12 @@ class OneFrameService[F[_]: Sync](client: Client[F], oneFrameHost: String, oneFr
 
   private val tokenHeader = Header("token", token)
 
-  override def get(pair: Rate.Pair): F[Either[Error, Rate]] = {
+  override def get(pairs: List[Rate.Pair]): F[Either[Error, List[Rate]]] = {
     for {
       base <- baseUri
-      ratesUri = base.withPath("rates").withQueryParam("pair", pair.show)
+      ratesUri = base.withPath("rates").withMultiValueQueryParams(Map("pair" -> pairs.map(_.show)))
       request = Request[F](uri = ratesUri).withHeaders(tokenHeader)
-      result <- client.expect[OneFrameResponse](request).map(_.asRate)
+      result <- client.expect[OneFrameResponse](request).map(_.asRates)
     } yield result
   }
 }

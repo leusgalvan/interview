@@ -1,6 +1,6 @@
 package forex.domain
 
-import cats.{Order, Show}
+import cats.Show
 
 sealed trait Currency
 
@@ -29,8 +29,6 @@ object Currency {
 
   lazy val all: List[Currency] = List(AUD, CAD, CHF, EUR, GBP, JPY, NZD, SGD, USD)
 
-  implicit val ord: Order[Currency] = Order.by(all.indexOf)
-
   def fromString(s: String): Option[Currency] = s.toUpperCase match {
     case "AUD" => Some(AUD)
     case "CAD" => Some(CAD)
@@ -42,16 +40,5 @@ object Currency {
     case "SGD" => Some(SGD)
     case "USD" => Some(USD)
     case _     => None
-  }
-
-  def findPath(from: Currency, to: Currency): List[Rate.Pair] = {
-    if(Order.lt(from, to)) {
-      val fromIdx = all.indexOf(from)
-      val toIdx = all.indexOf(to)
-      val nodes = all.slice(fromIdx, toIdx + 1)
-      nodes.zip(nodes.tail).map { case (c1, c2) => Rate.Pair(c1, c2) }
-    } else {
-      List.empty
-    }
   }
 }

@@ -4,12 +4,13 @@ import forex.domain.Rate.Pair
 import forex.domain.{Currency, Price, Rate, Timestamp}
 import forex.services.rates.errors.Error
 import forex.services.rates.errors.Error.{OneFrameLookupFailed, OneFrameMalformedResponse}
+import cats.syntax.traverse._
 
 object Converters {
   import Protocol._
 
   private[rates] implicit class OneFrameResponseOps(val oneFrameResponse: OneFrameResponse) extends AnyVal {
-    def asRate: Either[Error, Rate] = {
+    def asRates: Either[Error, List[Rate]] = {
       def parseCurrency(s: String): Either[Error, Currency] =
         Currency.fromString(s).toRight(OneFrameMalformedResponse(s"Invalid currency: $s"))
 
@@ -22,10 +23,8 @@ object Converters {
         } yield Rate(Pair(from, to), price, timestamp)
       }
 
-      lazy val noRateError: Either[Error, Rate] = Left(OneFrameMalformedResponse("Rates array is empty"))
-
       oneFrameResponse match {
-        case RatesResponse(rates) => rates.headOption.fold(noRateError)(parseRate)
+        case RatesResponse(rates) => rates.traverse(parseRate)
         case ErrorResponse(error) => Left(OneFrameLookupFailed(error))
       }
     }

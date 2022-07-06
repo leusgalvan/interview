@@ -14,6 +14,13 @@ trait Generators {
     Gen.oneOf(Currency.all)
   }
 
+  implicit val pairArb: Arbitrary[Rate.Pair] = Arbitrary {
+    for {
+      from <- currencyArb.arbitrary
+      to <- currencyArb.arbitrary
+    } yield Rate.Pair(from, to)
+  }
+
   implicit val bigDecimalArb: Arbitrary[BigDecimal] =
     Arbitrary(Gen.choose[BigDecimal](BigDecimal(0), BigDecimal(1)))
 
@@ -25,11 +32,10 @@ trait Generators {
 
   implicit val rateArb: Arbitrary[Rate] = Arbitrary {
     for {
-      from <- currencyArb.arbitrary
-      to <- currencyArb.arbitrary
+      pair <- pairArb.arbitrary
       price <- priceArb.arbitrary
       timestamp <- timestampArb.arbitrary
-    } yield Rate(Rate.Pair(from, to), price, timestamp)
+    } yield Rate(pair, price, timestamp)
   }
 
 

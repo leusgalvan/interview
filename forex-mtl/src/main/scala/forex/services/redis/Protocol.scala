@@ -8,13 +8,14 @@ import io.circe.syntax._
 import io.circe.parser._
 
 object Protocol {
-  val ratesKey = "rates"
+  def toRedisKey(pair: Rate.Pair): String =
+    s"${pair.from}${pair.to}"
 
-  def toRedisValue(rates: List[Rate]): String =
+  def toRedisValue(rates: Rate): String =
     rates.asJson.noSpaces
 
-  def fromRedisValue(ratesStr: String): Either[Error, List[Rate]] = {
-    decode[List[Rate]](ratesStr) match {
+  def fromRedisValue(rateStr: String): Either[Error, Rate] = {
+    decode[Rate](rateStr) match {
       case Right(rates) => Right(rates)
       case Left(err) => Left(RedisMalformedValue(err.getMessage))
     }
